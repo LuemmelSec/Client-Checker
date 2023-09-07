@@ -530,28 +530,23 @@ function Client-Checker{
     Write-host "#####################################"
     Write-host "References: https://learn.microsoft.com/en-us/windows-hardware/design/device-experiences/oem-secure-boot" -ForegroundColor DarkGray
     Write-host ""
-    $firmwareType = $null
-
     try {
-        $firmwareType = Get-CimInstance -Namespace root\cimv2\Security\MicrosoftTpm -ClassName Win32_Tpm -ErrorAction Stop | Select-Object -ExpandProperty SpecVersion
-        if ($firmwareType -ne $null) {
-            Write-Host "Secure Boot is enabled." -ForegroundColor Green
+        $value = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\State" -Name "UEFISecureBootEnabled" -ErrorAction Stop
+        
+        if ($value.UEFISecureBootEnabled -eq 1) {
+            Write-Host "Secure Boot is enabled" -ForegroundColor Green
             $secureboot = 0
-        } else {
-            Write-Host "Secure Boot is not enabled." -ForegroundColor Red
-            $secureboot = 2
         }
-    } catch {
-        if ($_.Exception.Message -like "*Access Denied*") {
-            Write-Host "Could not query the information with current rights." -ForegroundColor Yellow
-            $secureboot = 3
-        } else {
-            Write-Host "An error occurred: $($_.Exception.Message)" -ForegroundColor Red
+        elseif ($value.UEFISecureBootEnabled -eq 0) {
+            Write-Host "Secure Boot is disabled" -ForegroundColor Red
             $secureboot = 2
         }
     }
-
-
+    catch {
+        Write-Host "Secure Boot settings: Error (probably regkey doesn't exist - hence disabled)" -ForegroundColor Red
+        $secureboot = 2
+    }
+    
     # Can the Users group write to SYSTEM PATH folders > Hijacking possibilities?
     Write-host ""
     Write-host "###########################################################"
