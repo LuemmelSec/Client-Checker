@@ -3,7 +3,8 @@ This is my PowerShell script to automate client pentest / checkups - at least to
 You can use it together with my PwnDoc vulns to further get rid of unneccessary work -> https://github.com/LuemmelSec/PwnDoc-Vulns  
 
 # How
-![image](https://github.com/LuemmelSec/Pentest-Tools-Collection/assets/58529760/39b4b892-2d22-4dce-a436-b61d4ac0bfd8)
+![image](https://github.com/LuemmelSec/Client-Checker/assets/58529760/5324bf2e-efc8-47d2-87f1-cecc5a8b7f3a)
+
 
 If possible run as Admin, otherwise some checks might / will fail.  
 
@@ -53,7 +54,9 @@ It is used to check a client for common misconfigurations. The list currently in
   
 # The looks
 You will have a detailed section which gets generated on the fly with a category, what the script found as well as links to resources for more detail, abuse paths and remmediations.  
-![image](https://github.com/LuemmelSec/Pentest-Tools-Collection/assets/58529760/084d6a43-2bcd-4013-a95b-2cc3bf3283a9)
+![image](https://github.com/LuemmelSec/Client-Checker/assets/58529760/b65e34d6-38d2-4274-a402-84a5b20c584d)
+
 
 At the very end you will get a tabular overview that will help you to quickly get an overview of all checks done.
-![image](https://github.com/LuemmelSec/Pentest-Tools-Collection/assets/58529760/a5b7c4c2-9c05-4dde-9682-66a4409cde78)
+![image](https://github.com/LuemmelSec/Client-Checker/assets/58529760/7bc04ff0-acb0-4277-b249-d175ca61b66c)
+
