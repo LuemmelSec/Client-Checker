@@ -32,6 +32,7 @@ It is used to check a client for common misconfigurations. The list currently in
   - WDAC Usage
   - AppLocker Usage
   - Credential Guard Settings
+  - Co-installer Settings
   - DMA Protection Settings
   - BitLocker Settings
   - Secure Boot Settings
