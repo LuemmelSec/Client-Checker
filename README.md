@@ -17,7 +17,7 @@ import-module .\Client-Checker.ps1
 ```
 or
 ```
-iex(new-object net.webclient).downloadstring("https://raw.githubusercontent.com/LuemmelSec/Pentest-Tools-Collection/main/tools/Client-Checker/Client-Checker.ps1")
+iex(new-object net.webclient).downloadstring("https://raw.githubusercontent.com/LuemmelSec/Client-Checker/main/Client-Checker.ps1")
 ```
 then just
 ```
