@@ -1,5 +1,5 @@
 # Overview  
-This is my PowerShell script to automate client pentest / checkups - at least to a certain extend.  
+This is a PowerShell script to automate client pentests / checkups - at least to a certain extend.  
 You can use it together with my PwnDoc vulns to further get rid of unneccessary work -> https://github.com/LuemmelSec/PwnDoc-Vulns  
 
 # How
@@ -25,7 +25,7 @@ Client-Checker
 ```
 
 # What does it do  
-You should run it as admin, as certain stuff can only be queries with elevated rights.  
+You should run it as admin, as certain stuff can only be queried with elevated rights.  
 It is used to check a client for common misconfigurations. The list currently includes:  
   - Default Domain Password Policy
   - LSA Protection Settings
