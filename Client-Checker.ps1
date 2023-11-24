@@ -14,7 +14,7 @@ License: BSD 3-Clause
 $results = @()
 $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 function Client-Checker{
-    
+
     Write-host "##########################################################################################" -ForegroundColor DarkGray
     Write-host "####################################################################+=####################" -ForegroundColor DarkGray
     Write-host "#################################################################*######**################" -ForegroundColor DarkGray
@@ -40,7 +40,7 @@ function Client-Checker{
     Write-host "##################################### by @LuemmelSec #####################################" -ForegroundColor DarkGray
     Write-host "############################ Automated Client Security Checks ############################" -ForegroundColor DarkGray
     Write-host "##########################################################################################" -ForegroundColor DarkGray
-    Write-host "" 
+    Write-host ""
     Write-Host "Stuff marked in green is good" -ForegroundColor Green
     Write-Host "Stuff marked in magenta is a 'might be' finding" -ForegroundColor Magenta
     Write-Host "Stuff marked in red is bad stuff" -ForegroundColor Red
@@ -49,19 +49,19 @@ function Client-Checker{
     Write-Host "If you happen to use PwnDoc or PwnDoc-ng, you can use my templates alongside this tool:"
     Write-Host "https://github.com/LuemmelSec/PwnDoc-Vulns/blob/main/SystemSecurity.yml"
     Write-Host ""
-    
+
     ########### Preflight Checks ###########
 
     # Check if we run in elevated context so all checks can be done
     if($elevated -eq $true){
-        Write-Host "Local Admin: " -ForegroundColor white -NoNewline; Write-Host $elevated -ForegroundColor Green 
-        Write-Host "We have superpowers. All checks should go okay." -ForegroundColor DarkGray  
-        Write-Host ""     
+        Write-Host "Local Admin: " -ForegroundColor white -NoNewline; Write-Host $elevated -ForegroundColor Green
+        Write-Host "We have superpowers. All checks should go okay." -ForegroundColor DarkGray
+        Write-Host ""
     }
     else{
         Write-Host "Local Admin: " -ForegroundColor white -NoNewline; Write-Host $elevated -ForegroundColor Red
-        Write-Host "You don't have super powers. Some checks might fail!" -ForegroundColor DarkGray  
-        Write-Host ""     
+        Write-Host "You don't have super powers. Some checks might fail!" -ForegroundColor DarkGray
+        Write-Host ""
     }
 
     # Check if all needed PS modules are installed that we need for the tests
@@ -94,9 +94,9 @@ function Client-Checker{
     }
 
     ########### Beginning of the actual checks ###########
-    
+
     # Domain Password Policy checks
-    Write-Host "" 
+    Write-Host ""
     Write-Host "##############################################"
     Write-Host "# Now checking Default Domain Password stuff #"
     Write-Host "##############################################"
@@ -108,7 +108,7 @@ function Client-Checker{
 
     try {
         $defaultPolicy = Get-ADDefaultDomainPasswordPolicy
-        
+
         if ($defaultPolicy.ComplexityEnabled -eq $false){
             Write-Host "Complexity Enabled: $false" -ForegroundColor Red
             $pwpolicy_complexity = 2
@@ -162,27 +162,32 @@ function Client-Checker{
             $pwpolicy_revenc = 0
         }
 
-        Write-Host "Lockout Duration: $($defaultPolicy.LockoutDuration)" -ForegroundColor DarkGray 
+        Write-Host "Lockout Duration: $($defaultPolicy.LockoutDuration)" -ForegroundColor DarkGray
         Write-Host "Lockout Observation Window: $($defaultPolicy.LockoutObservationWindow)" -ForegroundColor DarkGray
     }
     catch {
         Write-Host "Failed to query domain information. Check if the domain is accessible." -ForegroundColor Yellow
         $pwpolicy_error = 1
     }
- 
+
 
     # Run As PPL checks
-    Write-host "" 
+    Write-host ""
     Write-host "#####################################"
     Write-host "# Now checking LSA Protection stuff #"
     Write-host "#####################################"
     Write-host "References: https://itm4n.github.io/lsass-runasppl/" -ForegroundColor DarkGray
+    Write-host "References: https://learn.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection" -ForegroundColor DarkGray
     Write-host ""
     try {
         $value = Get-ItemPropertyvalue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Lsa" -Name "RunAsPPL" -ErrorAction Stop
-        
+
         if ($value -eq 1) {
-            Write-Host "RunAsPPL: Enabled" -ForegroundColor Green
+            Write-Host "RunAsPPL: Enabled with UEFI Lock" -ForegroundColor Green
+            $RunAsPPL = 0
+        }
+        if ($value -eq 2) {
+            Write-Host "RunAsPPL: Enabled without UEFI Lock" -ForegroundColor Green
             $RunAsPPL = 0
         }
         elseif ($value -eq 0) {
@@ -225,13 +230,13 @@ function Client-Checker{
     Write-host "References: https://learn.microsoft.com/en-us/windows/security/threat-protection/device-guard/introduction-to-device-guard-virtualization-based-security-and-windows-defender-application-control" -ForegroundColor DarkGray
     Write-host "References: https://learn.microsoft.com/en-us/answers/questions/536416/checking-microsoft-defender-application-control-is" -ForegroundColor DarkGray
     Write-host "References: https://www.stigviewer.com/stig/windows_paw/2017-11-21/finding/V-78163" -ForegroundColor DarkGray
-    Write-host "References: https://www.stigviewer.com/stig/windows_paw/2017-11-21/finding/V-78157" -ForegroundColor DarkGray 
+    Write-host "References: https://www.stigviewer.com/stig/windows_paw/2017-11-21/finding/V-78157" -ForegroundColor DarkGray
     Write-host ""
     $deviceGuard = Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard
 
     $CodeIntegrityPolicyEnforcementStatus = $deviceGuard.CodeIntegrityPolicyEnforcementStatus
     $UsermodeCodeIntegrityPolicyEnforcementStatus = $deviceGuard.UsermodeCodeIntegrityPolicyEnforcementStatus
-    
+
     if ($CodeIntegrityPolicyEnforcementStatus -eq 2) {
         Write-Host "Code Integrity Policy Enforcement is enabled." -ForegroundColor Green
         $wdac_codeintegrity = 0
@@ -316,7 +321,7 @@ function Client-Checker{
 
     foreach ($keyPath in $keysToCheck) {
         $alwaysInstallElevated = Get-ItemProperty -Path $keyPath -Name "AlwaysInstallElevated" -ErrorAction SilentlyContinue
-        
+
         if ($alwaysInstallElevated -ne $null) {
             if ($alwaysInstallElevated.AlwaysInstallElevated -eq 1) {
                 $enabled = $true
@@ -332,7 +337,7 @@ function Client-Checker{
         Write-Host "Always install elevated is not active." -ForegroundColor Green
         $aie = 0
     }
-    
+
     # Credential Guard checks
     Write-host ""
     Write-host "#######################################"
@@ -361,7 +366,7 @@ function Client-Checker{
     Write-host ""
     try {
         $value = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer" -Name "DisableCoInstallers" -ErrorAction Stop
-        
+
         if ($value -eq 1) {
             Write-Host "Allow installation of Co-installers: Disabled" -ForegroundColor Green
             $coinstaller = 0
@@ -387,7 +392,7 @@ function Client-Checker{
     Write-host ""
     try {
         $value = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceLock" -Name "AllowDirectMemoryAccess" -ErrorAction Stop
-        
+
         if ($value -eq 1) {
             Write-Host "AllowDirectMemoryAccess: Enabled" -ForegroundColor Red
             $dma_access = 2
@@ -405,10 +410,10 @@ function Client-Checker{
         Write-Host "AllowDirectMemoryAccess: Error (probably regkey doesn't exist - hence enabled)" -ForegroundColor Magenta
         $dma_access = 1
     }
-    
+
     try {
         $value = Get-ItemPropertyValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name "EnableVirtualizationBasedSecurity" -ErrorAction Stop
-        
+
         if ($value -eq 1) {
             Write-Host "EnableVirtualizationBasedSecurity: Enabled" -ForegroundColor Green
             $dma_vbs = 0
@@ -429,7 +434,7 @@ function Client-Checker{
 
     try {
         $value = Get-ItemPropertyValue -Path Get-ItemPropertyValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "Enabled" -ErrorAction Stop
-        
+
         if ($value -eq 1) {
             Write-Host "HypervisorEnforcedCodeIntegrity: Enabled" -ForegroundColor Green
             $dma_heci = 0
@@ -450,7 +455,7 @@ function Client-Checker{
 
     try {
         $value = Get-ItemPropertyValue -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" -Name "LockConfiguration" -ErrorAction Stop
-        
+
         if ($value -eq 1) {
             Write-Host "HypervisorEnforcedCodeIntegrity Config Locked: Enabled" -ForegroundColor Green
             $dma_heci_locked = 0
@@ -469,7 +474,7 @@ function Client-Checker{
         $dma_heci_locked = 1
     }
 
-    # BitLocker status 
+    # BitLocker status
     Write-host ""
     Write-host "###################################"
     Write-host "# Now checking BitLocker settings #"
@@ -532,7 +537,7 @@ function Client-Checker{
     Write-host ""
     try {
         $value = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\State" -Name "UEFISecureBootEnabled" -ErrorAction Stop
-        
+
         if ($value.UEFISecureBootEnabled -eq 1) {
             Write-Host "Secure Boot is enabled" -ForegroundColor Green
             $secureboot = 0
@@ -546,7 +551,7 @@ function Client-Checker{
         Write-Host "Secure Boot settings: Error (probably regkey doesn't exist - hence disabled)" -ForegroundColor Red
         $secureboot = 2
     }
-    
+
     # Can the Users group write to SYSTEM PATH folders > Hijacking possibilities?
     Write-host ""
     Write-host "###########################################################"
@@ -558,12 +563,12 @@ function Client-Checker{
     $spa_redCount = 0
     $env:Path -split ';' | ForEach-Object {
         $folder = $_
-    
+
         if (Test-Path -Path $folder) {
             $acl = Get-Acl -Path $folder
             $usersGroup = New-Object System.Security.Principal.NTAccount("BUILTIN", "Users")
             $usersAccess = $acl.Access | Where-Object { $_.IdentityReference -eq $usersGroup -and $_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Write }
-    
+
             if ($usersAccess -ne $null) {
                 Write-Host "Members of the Users Group can write to folder: $folder" -ForegroundColor Red
                 $spa_redCount++
@@ -575,7 +580,7 @@ function Client-Checker{
             Write-Host "Folder does not exist: $folder"
         }
     }
-    
+
     # Do we have unqoted service paths? > Hijacking possibilities?
     Write-host ""
     Write-host "###########################################"
@@ -597,7 +602,7 @@ function Client-Checker{
         $path = $service.PathName
         $displayName = $service.DisplayName
         $startMode = $service.StartMode
-        
+
         Write-Host "Service Name: $($serviceName)" -ForegroundColor Red
         Write-Host "Path: $($path)" -ForegroundColor Red
         Write-Host "Display Name: $($displayName)" -ForegroundColor Red
@@ -615,11 +620,11 @@ function Client-Checker{
     Write-host ""
     try {
         $wsusPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"
-    
+
         if (Test-Path -Path $wsusPath) {
             $wsusConfiguration = Get-ItemProperty -Path $wsusPath -Name "WUServer"
             $wsusServerUrl = $wsusConfiguration.WUServer
-    
+
             if ($wsusServerUrl -match "^http://") {
                 Write-Host "WSUS updates are fetched over HTTP." -ForegroundColor Red
                 $wsus = 2
@@ -635,7 +640,7 @@ function Client-Checker{
         Write-Host "An error occurred while checking the WSUS configuration."
         $wsus = 3
     }
-    
+
     # PowerShell related checks
     Write-host ""
     Write-host "####################################"
@@ -643,7 +648,7 @@ function Client-Checker{
     Write-host "####################################"
     Write-host "References: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-7.3" -ForegroundColor DarkGray
     Write-host ""
-    
+
     # Check if PowerShell v2 can be run
     $psVersion2Enabled = $false
 
@@ -708,7 +713,7 @@ function Client-Checker{
     Write-host "References: https://blog.fox-it.com/2018/01/11/mitm6-compromising-ipv4-networks-via-ipv6/" -ForegroundColor DarkGray
     Write-host "References: https://www.blackhillsinfosec.com/mitm6-strikes-again-the-dark-side-of-ipv6/" -ForegroundColor DarkGray
     Write-host ""
-    
+
     $adapterStatus = Get-NetAdapterBinding | Where-Object {$_.ComponentID -eq "ms_tcpip6"} | Select-Object -Property Name, Enabled
     $adapterStatus | ForEach-Object {
         $adapterName = $_.Name
@@ -740,7 +745,7 @@ function Client-Checker{
         } elseif ($llmnrValue -eq 1) {
             Write-Host "LLMNR status: enabled" -ForegroundColor Red
             $llmnr = 2
-        } 
+        }
     } catch {
         Write-Host "LLMNR status: reg key not found - hence enabled" -ForegroundColor Red
         $llmnr = 2
@@ -757,9 +762,9 @@ function Client-Checker{
         $adapterName = $adapterKey.PSChildName
         if ($adapterName -like "Tcpip_*") {
             $adapterName = $adapterName -replace "^Tcpip_", ""
-            
+
             $netbiosOptions = (Get-ItemProperty -Path "$netbtInterfacePath\$($adapterKey.PSChildName)" -Name "NetbiosOptions" -ErrorAction SilentlyContinue).NetbiosOptions
-            
+
             if ($netbiosOptions -eq 1 -or $netbiosOptions -eq 0) {
                 $netbiosEnabled = $true
                 $enabledAdapters += $adapterName
@@ -790,7 +795,7 @@ function Client-Checker{
     Write-host "References: https://luemmelsec.github.io/Relaying-101/" -ForegroundColor DarkGray
     Write-host "References: https://techcommunity.microsoft.com/t5/storage-at-microsoft/configure-smb-signing-with-confidence/ba-p/2418102" -ForegroundColor DarkGray
     Write-host ""
-    
+
     $smbConfig = Get-SmbServerConfiguration
 
     # Check SMB1 settings
@@ -818,17 +823,17 @@ function Client-Checker{
     Write-host "##################################"
     Write-host "References: https://learn.microsoft.com/en-us/windows/security/operating-system-security/network-security/windows-firewall/best-practices-configuring" -ForegroundColor DarkGray
     Write-host ""
-    
+
     try {
         $firewallProfile = Get-NetFirewallProfile -Profile Domain, Public, Private -ErrorAction Stop
-    
+
         if ($firewallProfile.Enabled) {
             Write-Host "Windows Firewall is enabled." -ForegroundColor Magenta
             Write-Host "Firewall Rules (check them for dangerous stuff):" -ForegroundColor Magenta
-            
+
             # Get all Firewall rules
             $firewallRules = Get-NetFirewallRule 2>&1
-    
+
             if ($firewallRules -match "Access is denied") {
                 Write-Host "Could not query the information with current rights." -ForegroundColor Yellow
                 $firewall = 3
@@ -838,28 +843,28 @@ function Client-Checker{
                 $firewall = 1
                 foreach ($rule in $firewallRules) {
                     $ruleName = $rule.Name
-    
+
                     # The ports are not stored directly in the rules but in the associated Port Filter set
                     $portFilters = Get-NetFirewallPortFilter -AssociatedNetFirewallRule $rule -ErrorAction SilentlyContinue
-    
+
                     $localAddresses = @()
                     $remoteAddresses = @()
-    
+
                     # Local and remote addresses are not directly stored in the rule but in the associated Address Filter set
                     $addressFilters = Get-NetFirewallAddressFilter -AssociatedNetFirewallRule $rule -ErrorAction SilentlyContinue
                     foreach ($addressFilter in $addressFilters) {
                         if ($addressFilter.LocalAddress -ne "*") {
                             $localAddresses += $addressFilter.LocalAddress
                         }
-    
+
                         if ($addressFilter.RemoteAddress -ne "*") {
                             $remoteAddresses += $addressFilter.RemoteAddress
                         }
                     }
-    
+
                     $localAddress = if ($localAddresses) { $localAddresses -join ', ' } else { "N/A" }
                     $remoteAddress = if ($remoteAddresses) { $remoteAddresses -join ', ' } else { "N/A" }
-    
+
                     $ruleEntry = [PSCustomObject]@{
                         "Rule Name"        = $rule.DisplayName
                         "Action"           = $rule.Action
@@ -870,10 +875,10 @@ function Client-Checker{
                         "Local Address"    = $localAddress
                         "Remote Address"   = $remoteAddress
                     }
-    
+
                     $ruleTable += $ruleEntry
                 }
-    
+
                 $ruleTable | Format-Table -AutoSize
             } else {
                 Write-Host "No firewall rules found." -ForegroundColor Green
@@ -887,7 +892,7 @@ function Client-Checker{
         Write-Host "An error occurred: $($_.Exception.Message)" -ForegroundColor Yellow
         $firewall = 3
     }
-    
+
 
 
     # AV Checks
@@ -931,15 +936,15 @@ function Client-Checker{
     foreach ($av in $avinfo) {
         # get status in decimal
         $state = $av.productState
-        # convert decimal to hex 
+        # convert decimal to hex
         $state = '0x{0:x}' -f $state
 
         # decode flags
         $productStatus = [ProductState]($state -band [ProductFlags]::ProductState)
         $signatureStatus = [SignatureStatus]($state -band [ProductFlags]::SignatureStatus)
-        
+
         if ($productStatus -eq "On") {
-            Write-Host "Name: $($av.displayName)" 
+            Write-Host "Name: $($av.displayName)"
             Write-Host "Product Status: $($productStatus.ToString())" -ForegroundColor Green
             $av_on = 0
 
@@ -953,7 +958,7 @@ function Client-Checker{
 
             Write-Host ""
         } elseif ($productStatus -eq "Snoozed") {
-            Write-Host "Name: $($av.displayName)" 
+            Write-Host "Name: $($av.displayName)"
             Write-Host "Product Status: $($productStatus.ToString())" -ForegroundColor Magenta
             $av_on = 1
 
@@ -967,7 +972,7 @@ function Client-Checker{
 
             Write-Host ""
         } else {
-            Write-Host "Name: $($av.displayName)" 
+            Write-Host "Name: $($av.displayName)"
             Write-Host "Product Status: $($productStatus.ToString())" -ForegroundColor Red
             $av_on = 2
 
@@ -991,7 +996,7 @@ function Client-Checker{
     Write-host "###############################"
     Write-host "References: " -ForegroundColor DarkGray
     Write-host ""
-    
+
     $proxySettings = Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings'
 
     if ($proxySettings.ProxyEnable) {
@@ -1080,9 +1085,9 @@ function Client-Checker{
     $InstalledSoftware += Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" |
                           Get-ItemProperty |
                           Select-Object DisplayName, DisplayVersion, @{n='InstallDate';e={([datetime]::ParseExact($_.InstallDate,'yyyyMMdd',$null)).ToString('dd-MM-yyyy')}}
-    $InstalledSoftware | Sort-Object DisplayName | Format-Table -AutoSize    
+    $InstalledSoftware | Sort-Object DisplayName | Format-Table -AutoSize
 
-    
+
     # RDP Checks
     Write-host ""
     Write-host "##########################"
@@ -1092,7 +1097,7 @@ function Client-Checker{
     Write-host "References: https://viperone.gitbook.io/pentest-everything/everything/everything-active-directory/adversary-in-the-middle/rdp-mitm" -ForegroundColor DarkGray
     Write-host "References: https://www.tenable.com/plugins/nessus/18405" -ForegroundColor DarkGray
     Write-host ""
-    
+
     # Check if RDP is enabled
     $rdpEnabled = Get-CimInstance -Namespace "root/CIMv2/TerminalServices" -ClassName "Win32_TerminalServiceSetting" | Select-Object -ExpandProperty AllowTSConnections
     if ($rdpEnabled -eq 1) {
@@ -1177,7 +1182,7 @@ function Client-Checker{
     Write-host "# Summary #" -ForegroundColor DarkCyan
     Write-host "###########" -ForegroundColor DarkCyan
     Write-host ""
-    
+
     if ($elevated -eq $true) {
         Add-Result "Ran as Admin" "-" "OK"
     }
@@ -1211,13 +1216,13 @@ function Client-Checker{
         0 {}
         1 {Add-Result "Password Policy" "-" "Error"}
     }
-    
+
     switch ($RunAsPPL){
         0 {Add-Result "RunAsPPL" "-" "OK"}
         1 {Add-Result "RunAsPPL" "-" "MAYBE"}
         2 {Add-Result "RunAsPPL" "-" "BAD"}
     }
-    
+
     switch ($wdac_usercodeintegrity){
         0 {Add-result "WDAC" "User Mode Code Integrity Policy Enforcement" "OK"}
         1 {Add-result "WDAC" "User Mode Code Integrity Policy Enforcement" "MAYBE"}
@@ -1228,7 +1233,7 @@ function Client-Checker{
         1 {Add-result "WDAC" "Code Integrity Policy Enforcement" "MAYBE"}
         2 {Add-result "WDAC" "Code Integrity Policy Enforcement" "BAD"}
     }
-    
+
     switch ($applocker){
         0 {Add-Result "Applocker" "-" "OK"}
         2 {Add-Result "Applocker" "-" "BAD"}
@@ -1238,22 +1243,22 @@ function Client-Checker{
         0 {Add-Result "UAC" "-" "OK"}
         2 {Add-Result "UAC" "-" "BAD"}
     }
-    
+
     switch ($aie){
         0 {Add-Result "Always Install Elevated" "-" "OK"}
         2 {Add-Result "Always Install Elevated" "-" "BAD"}
     }
-    
+
     switch ($credguard){
         0 {Add-Result "Credential Guard" "-" "OK"}
         2 {Add-Result "Credential Guard" "-" "BAD"}
     }
-    
+
     switch ($coinstaller){
         0 {Add-Result "Co-installer" "-" "OK"}
         2 {Add-Result "Co-installer" "-" "BAD"}
     }
-    
+
     switch ($dma_access){
         0 {Add-Result "DMA" "Status" "OK"}
         1 {Add-Result "DMA" "Status" "MAYBE"}
@@ -1274,7 +1279,7 @@ function Client-Checker{
         1 {Add-Result "DMA" "HECI Lock" "MAYBE"}
         2 {Add-Result "DMA" "HECI Lock" "BAD"}
     }
-    
+
     if ($bl_redCount -gt 0) {
         Add-Result "Bitlocker" "-" "BAD" -ForegroundColor Red
     }
@@ -1287,33 +1292,33 @@ function Client-Checker{
     elseif ($bl_greenCount -gt 0) {
         Add-Result "Bitlocker" "-" "OK"
     }
-    
+
     switch ($secureboot){
         0 {Add-Result "Secure Boot" "-" "OK"}
         2 {Add-Result "Secure Boot" "-" "BAD"}
         3 {Add-Result "Secure Boot" "-" "Error"}
     }
-    
+
     if ($spa_redCount -gt 0) {
         Add-result "System Path ACLs" "-" "BAD"
     }
     elseif ($spa_greenCount -gt 0) {
         Add-result "System Path ACLs" "-" "OK"
     }
-    
+
     if ($uqsp_redcount -gt 0) {
         Add-Result "Unquoted Service Paths" "-" "BAD"
     }
     else {
         Add-Result "Unquoted Service Paths" "-" "OK"
     }
-    
+
     switch ($wsus){
         0 {Add-Result "WSUS" "-" "OK"}
         2 {Add-Result "WSUS" "-" "RED"}
         3 {Add-Result "WSUS" "-" "Error"}
     }
-    
+
     switch ($ps_v2){
         0 {Add-Result "PowerShell" "V2" "OK"}
         2 {Add-Result "PowerShell" "V2" "BAD"}
@@ -1327,12 +1332,12 @@ function Client-Checker{
         0 {Add-Result "PowerShell" "Language Mode" "OK"}
         2 {Add-Result "PowerShell" "Language Mode" "BAD"}
     }
-    
+
     switch ($ipv6){
         0 {Add-Result "IPv6" "-" "OK"}
         2 {Add-Result "IPv6" "-" "BAD"}
     }
-    
+
     switch ($llmnr){
         0 {Add-Result "LLMNR" "-" "OK"}
         2 {Add-Result "LLMNR" "-" "BAD"}
@@ -1341,7 +1346,7 @@ function Client-Checker{
         0 {Add-Result "NetBIOS" "-" "OK"}
         2 {Add-Result "NetBIOS" "-" "BAD"}
     }
-    
+
     switch ($smb_v1){
         0 {Add-Result "SMB" "V1" "OK"}
         2 {Add-Result "SMB" "V1" "BAD"}
@@ -1350,14 +1355,14 @@ function Client-Checker{
         0 {Add-Result "SMB" "Signing" "OK"}
         2 {Add-Result "SMB" "Signing" "BAD"}
     }
-    
+
     switch ($secureboot){
         0 {Add-Result "Secure Boot" "-" "OK"}
         1 {Add-Result "Secure Boot" "-" "MAYBE"}
         2 {Add-Result "Secure Boot" "-" "BAD"}
         3 {Add-Result "Secure Boot" "-" "Error"}
     }
-    
+
     switch ($av_on){
         0 {Add-Result "AV" "Status" "OK"}
         1 {Add-Result "AV" "Status" "MAYBE"}
@@ -1365,24 +1370,24 @@ function Client-Checker{
     }
     switch ($av_utd){
         0 {Add-Result "AV" "Pattern" "OK"}
-        2 {Add-Result "AV" "Pattern" "BAD"}  
+        2 {Add-Result "AV" "Pattern" "BAD"}
     }
-    
+
     switch ($proxy_enabled){
         1 {Add-Result "Proxy" "Status" "MAYBE"}
         2 {Add-Result "Proxy" "Status" "BAD"}
     }
     switch ($proxy_autoconfig){
         1 {Add-Result "Proxy" "Autoconfig" "MAYBE"}
-        2 {Add-Result "Proxy" "Autoconfig" "BAD"}  
+        2 {Add-Result "Proxy" "Autoconfig" "BAD"}
     }
-    
+
     switch ($winupdate){
         0 {Add-Result "Windows Updates" "-" "OK"}
         1 {Add-Result "Windows Updates" "-" "MAYBE"}
         2 {Add-Result "Windows Updates" "-" "BAD"}
     }
-    
+
     switch ($rdp_enabled){
         0 {Add-Result "RDP" "Status" "OK"}
         1 {Add-Result "RDP" "Status" "MAYBE"}
@@ -1397,12 +1402,12 @@ function Client-Checker{
         0 {Add-Result "RDP" "NLA" "OK"}
         2 {Add-Result "RDP" "NLA" "BAD"}
     }
-    
+
     switch ($winrm){
         0 {Add-Result "WinRM" "Status" "OK"}
         1 {Add-Result "WinRM" "Status" "MAYBE"}
     }
-   
+
     $results | Format-Table -AutoSize
 
     Write-host ""
