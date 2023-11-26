@@ -304,6 +304,33 @@ function Client-Checker{
         $uac = 2
     }
 
+    # Guest Account check
+    Write-host ""
+    Write-host "############################################"
+    Write-host "# Now checking if Guest Account is enabled #"
+    Write-host "############################################"
+    Write-host "References: https://learn.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/accounts-guest-account-status" -ForegroundColor DarkGray
+    Write-host ""
+    # Get local user accounts
+    $guestAccount = Get-CimInstance -ClassName Win32_UserAccount | Where-Object {
+        $_.SID -match "-501" # The local Guest Account always has RID 501
+    }
+    
+    # Check if the Guest account exists
+    if ($guestAccount) {
+        # Check if the Guest account is enabled
+        if ($guestAccount.Disabled -eq $false) {
+            Write-Host "Guest account enabled" -ForegroundColor Red
+            $guestacc = 2
+        } else {
+            Write-Host "Guest account disabled" -ForegroundColor Green
+            $guestacc = 0
+        }
+    } else {
+        Write-Host "Guest account not found" -ForegroundColor Magenta
+        $guestacc = 1
+    }
+    
     # Always install elevated active?
     Write-host ""
     Write-host "######################################################"
@@ -1243,6 +1270,12 @@ function Client-Checker{
         0 {Add-Result "UAC" "-" "OK"}
         2 {Add-Result "UAC" "-" "BAD"}
     }
+    switch ($guestacc){
+        0 {Add-Result "Guest Account" "-" "OK"}
+        1 {Add-Result "Guest Account" "-" "MAYBE"}
+        2 {Add-Result "Guest Account" "-" "BAD"}
+    }
+    
 
     switch ($aie){
         0 {Add-Result "Always Install Elevated" "-" "OK"}
