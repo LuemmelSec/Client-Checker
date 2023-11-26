@@ -41,6 +41,7 @@ It is used to check a client for common misconfigurations. The list currently in
   - Always Install Elevated checks
   - UAC checks
   - Guest Account checks
+  - System Tool access as low priv user checks
   - WSUS Settings
   - PowerShell Settings
   - IPv6 Settings
