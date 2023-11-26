@@ -40,6 +40,7 @@ It is used to check a client for common misconfigurations. The list currently in
   - Unquoted Service Path checks
   - Always Install Elevated checks
   - UAC checks
+  - Guest Account checks
   - WSUS Settings
   - PowerShell Settings
   - IPv6 Settings
