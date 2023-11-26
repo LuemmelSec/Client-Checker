@@ -327,8 +327,8 @@ function Client-Checker{
             $guestacc = 0
         }
     } else {
-        Write-Host "Guest account not found" -ForegroundColor Magenta
-        $guestacc = 1
+        Write-Host "Guest account not found" -ForegroundColor Yellow
+        $guestacc = 3
     }
     
     # Always install elevated active?
@@ -1274,6 +1274,7 @@ function Client-Checker{
         0 {Add-Result "Guest Account" "-" "OK"}
         1 {Add-Result "Guest Account" "-" "MAYBE"}
         2 {Add-Result "Guest Account" "-" "BAD"}
+        3 {Add-Result "Guest Account" "-" "Error"}
     }
     
 
