@@ -1,6 +1,6 @@
 <#
 This is such an awesome script - not
-Better run as admin because some shit can not be queried without (e.g. BitLocker status)
+Better run twice, 1x as admin because some shit can not be queried without (e.g. BitLocker status) and 1x as low priv user to check things like software installable as low priv user or access to systemtools like registry etc.
 Green = good
 Red = Not good
 Purple = possibly not good
