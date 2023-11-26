@@ -330,7 +330,93 @@ function Client-Checker{
         Write-Host "Guest account not found" -ForegroundColor Yellow
         $guestacc = 3
     }
+
+    # System Tools as Low Priv User check
+    # We only want to check if not ran as admin
+    if($elevated -eq $false){ 
+    Write-host ""
+    Write-host "#######################################################"
+    Write-host "# Now checking if Low Priv User can run System Tools  #"
+    Write-host "#######################################################"
+    Write-host "References: " -ForegroundColor DarkGray
+    Write-host ""
+
+    Write-host "We are now trying to open several system tools with our low priv user. Please do only close them manually if they do not autoclose after the test." -ForegroundColor yellow
+    Write-host "You may observe error messages when programs were run with UAC, which is absolutely normal, and can be ignored." -ForegroundColor yellow
+    Write-host "You need to answer the questions in this PowerShell window!!!" -ForegroundColor yellow
+    $response = Read-Host "ARE YOU READY FOR THE TESTS???? (y/n)(Choosing n will skip the tests)"
+    if ($response -eq 'y') {
+        # Check if can run registry
+        $registrySuccess = $null
+        try {
+            $registrySuccess = Start-Process 'regedit.exe' -PassThru
+            $response = Read-Host "Was the registry editor started successfully? (y/n)"
+            if ($response -eq 'y') {
+                Write-Host "Normal user can run regedit" -ForegroundColor Red
+                $stregedit = 2
+            } else {
+                Write-Host "Normal user cannot run regedit" -ForegroundColor Green
+                $stregedit = 0
+            }
+        } catch {
+            Write-Host "An error occured" -ForegroundColor yellow
+            $stregedit = 3
+        } finally {
+            if ($registrySuccess) {
+                Stop-Process -Id $registrySuccess.Id -Force
+            }
+        }
     
+        # Check if can run cmd
+        $cmdSuccess = $null
+        try {
+            $cmdSuccess = Start-Process 'cmd.exe' -PassThru
+            $response = Read-Host "Was the command prompt started successfully? (y/n)"
+            if ($response -eq 'y') {
+                Write-Host "Normal user can run cmd" -ForegroundColor Red
+                $stcmd = 2
+            } else {
+                Write-Host "Normal user cannot run cmd" -ForegroundColor Green
+                $stcmd = 0
+            }
+        } catch {
+            Write-Host "An error occured" -ForegroundColor yellow
+            $stcmd = 3
+        } finally {
+            if ($cmdSuccess) {
+                Stop-Process -Id $cmdSuccess.Id -Force
+            }
+        }
+    
+        # Check if can run PowerShell
+        $powershellSuccess = $null
+        try {
+            $powershellSuccess = Start-Process 'powershell.exe' -PassThru 
+            $response = Read-Host "Was PowerShell started successfully? (y/n)"
+            if ($response -eq 'y') {
+                Write-Host "Normal user can run PowerShell" -ForegroundColor Red
+                $stpowershell = 2
+            } else {
+                Write-Host "Normal user cannot run PowerShell" -ForegroundColor Green
+                $stpowershell = 0
+            }
+        } catch {
+            Write-Host "An error occured" -ForegroundColor yellow
+            $stpowershell = 3
+        } finally {
+            if ($powershellSuccess) {
+                Stop-Process -Id $powershellSuccess.Id -Force
+            }
+        }    
+            } 
+        elseif ($response -eq 'n') {
+            Write-Host "Okay, we will skip those" -ForegroundColor Red
+        }
+        else {
+            Write-Host "God dammit, only y or n!!!" -ForegroundColor yellow
+        }
+    }
+        
     # Always install elevated active?
     Write-host ""
     Write-host "######################################################"
@@ -1276,8 +1362,25 @@ function Client-Checker{
         2 {Add-Result "Guest Account" "-" "BAD"}
         3 {Add-Result "Guest Account" "-" "Error"}
     }
-    
 
+    switch ($stregedit){
+        0 {Add-result "System Tools" "regedit" "OK"}
+        2 {Add-result "System Tools" "regedit" "BAD"}
+        3 {Add-result "System Tools" "regedit" "Error"}
+    }
+
+    switch ($stcmd){
+        0 {Add-result "System Tools" "cmd" "OK"}
+        2 {Add-result "System Tools" "cmd" "BAD"}
+        3 {Add-result "System Tools" "cmd" "Error"}
+    }
+
+    switch ($stpowershell){
+        0 {Add-result "System Tools" "PowerShell" "OK"}
+        2 {Add-result "System Tools" "PowerShell" "BAD"}
+        3 {Add-result "System Tools" "PowerShell" "Error"}
+    }
+    
     switch ($aie){
         0 {Add-Result "Always Install Elevated" "-" "OK"}
         2 {Add-Result "Always Install Elevated" "-" "BAD"}
