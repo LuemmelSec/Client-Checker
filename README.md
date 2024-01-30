@@ -54,6 +54,7 @@ It is used to check a client for common misconfigurations. The list currently in
   - 3rd Party Installations
   - RDP Settings
   - WinRM Settings
+  - PrintNightmare checks
   
 # The looks
 You will have a detailed section which gets generated on the fly with a category, what the script found as well as links to resources for more detail, abuse paths and remmediations.  
