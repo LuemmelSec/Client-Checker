@@ -1288,6 +1288,88 @@ function Client-Checker{
         $winrm = 0
     }
 
+    # PrintNightmare Checks
+    Write-host ""
+    Write-host "#####################################"
+    Write-host "# Now checking PrintNightmare stuff #"
+    Write-host "#####################################"
+    Write-host "References: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.Printing::RestrictDriverInstallationToAdministrators" -ForegroundColor DarkGray
+    Write-host "References: https://admx.help/?Category=Windows_10_2016&Policy=Microsoft.Policies.Printing::PointAndPrint_Restrictions" -ForegroundColor DarkGray
+    Write-host "References: https://support.microsoft.com/en-gb/topic/kb5005652-manage-new-point-and-print-default-driver-installation-behavior-cve-2021-34481-873642bf-2634-49c5-a23b-6d8e9a302872" -ForegroundColor DarkGray
+    Write-host "References: https://itm4n.github.io/printnightmare-exploitation/" -ForegroundColor DarkGray
+    Write-host ""
+
+    # Check if normal users can install package aware printer drivers
+    try {
+        $value = Get-ItemPropertyvalue -Path "HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint" -Name "RestrictDriverInstallationToAdministrators" -ErrorAction Stop
+
+        if ($value -eq 1) {
+            Write-Host "Only Admins can install package aware printer drivers." -ForegroundColor Green
+            $printnightmare_pa = 0
+        }
+        elseif ($value -eq 0) {
+            Write-Host "Normal users can install package aware printer drivers." -ForegroundColor Red
+            $printnightmare_pa = 2
+        }
+        else {
+            Write-Host "Install package aware printer driver as lowpriv user: regkey doesn't exist - hence disabled" -ForegroundColor Green
+            $printnightmare_pa = 0
+        }
+    }
+    catch {
+        Write-Host "Install package aware printer driver as lowpriv user: regkey doesn't exist - hence disabled" -ForegroundColor Green
+        $printnightmare_pa = 0
+    }
+
+    # Check if normal users can install non package aware printer drivers
+    # Drivers for new connections
+    try {
+        $value = Get-ItemPropertyvalue -Path "HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint" -Name "NoWarningNoElevationOnInstall" -ErrorAction Stop
+
+        if ($value -eq 0) {
+            Write-Host "Only Admins can install non package aware printer drivers for new connections." -ForegroundColor Green
+            $printnightmare_npa_new = 0
+        }
+        elseif ($value -eq 1) {
+            Write-Host "Normal users can install non package aware printer drivers for new connections." -ForegroundColor Red
+            $printnightmare_npa_new = 2
+        }
+        else {
+            Write-Host "Install non package aware printer driver as lowpriv user for new connections: regkey doesn't exist - hence disabled" -ForegroundColor Green
+            $printnightmare_npa_new = 0
+        }
+    }
+    catch {
+        Write-Host "Install non package aware printer driver as lowpriv user for new connections: regkey doesn't exist - hence disabled" -ForegroundColor Green
+        $printnightmare_npa_new = 0
+    }
+
+    # Drivers for updated connections
+    try {
+        $value = Get-ItemPropertyvalue -Path "HKLM:\Software\Policies\Microsoft\Windows NT\Printers\PointAndPrint" -Name "UpdatePromptSettings" -ErrorAction Stop
+
+        if ($value -eq 0) {
+            Write-Host "Only Admins can install non package aware printer drivers for updated connections." -ForegroundColor Green
+            $printnightmare_npa_upd = 0
+        }
+        elseif ($value -eq 1) {
+            Write-Host "Normal users can install non package aware printer drivers for updated connections." -ForegroundColor Red
+            $printnightmare_npa_upd = 2
+        }
+        elseif ($value -eq 2) {
+            Write-Host "Normal users can install non package aware printer drivers for updated connections." -ForegroundColor Red
+            $printnightmare_npa_upd = 2
+        }
+        else {
+            Write-Host "Install non package aware printer driver as lowpriv user for updated connections: regkey doesn't exist - hence disabled" -ForegroundColor Green
+            $printnightmare_npa_upd = 0
+        }
+    }
+    catch {
+        Write-Host "Install non package aware printer driver as lowpriv user for updated connections: regkey doesn't exist - hence disabled" -ForegroundColor Green
+        $printnightmare_npa_upd = 0
+    }
+    
 
     # Summary
     Write-host ""
@@ -1543,6 +1625,21 @@ function Client-Checker{
     switch ($winrm){
         0 {Add-Result "WinRM" "Status" "OK"}
         1 {Add-Result "WinRM" "Status" "MAYBE"}
+    }
+
+    switch ($printnightmare_pa){
+        0 {Add-Result "PrintNightmare" "Package Aware" "OK"}
+        2 {Add-Result "PrintNightmare" "Package Aware" "BAD"}
+    }
+
+    switch ($printnightmare_npa_new){
+        0 {Add-Result "PrintNightmare" "Non Package Aware New" "OK"}
+        2 {Add-Result "PrintNightmare" "Non Package Aware New" "BAD"}
+    }
+
+    switch ($printnightmare_npa_upd){
+        0 {Add-Result "PrintNightmare" "Non Package Aware Update" "OK"}
+        2 {Add-Result "PrintNightmare" "Non Package Aware Update" "BAD"}
     }
 
     $results | Format-Table -AutoSize
