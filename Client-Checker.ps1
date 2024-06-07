@@ -1369,7 +1369,88 @@ function Client-Checker{
         Write-Host "Install non package aware printer driver as lowpriv user for updated connections: regkey doesn't exist - hence disabled" -ForegroundColor Green
         $printnightmare_npa_upd = 0
     }
-    
+
+    # Recall / AI Checks
+    Write-host ""
+    Write-host "#############################"
+    Write-host "# Now checking Recall stuff #"
+    Write-host "#############################"
+    Write-host "References: https://support.microsoft.com/en-us/windows/privacy-and-control-over-your-recall-experience-d404f672-7647-41e5-886c-a3c59680af15" -ForegroundColor DarkGray
+    Write-host "References: https://learn.microsoft.com/da-dk/windows/client-management/mdm/policy-csp-windowsai" -ForegroundColor DarkGray
+    Write-host "References: https://github.com/xaitax/TotalRecall" -ForegroundColor DarkGray
+    Write-host ""
+
+    # Check all user folders
+    $results_basefolder = @()
+    $results_database = @()
+    $results_imagefolder = @()
+    $usersPath = "C:\Users"
+    $users = Get-ChildItem -Path $usersPath -Directory
+
+    # Iterate over all user folders and check if the Recall folder, the subfolders for images or the database file exist
+    foreach ($user in $users) {
+        $username = $user.Name
+        $basePath = "C:\Users\$username\AppData\Local\CoreAIPlatform.00\UKP"
+
+        if (-Not (Test-Path -Path $basePath)) {
+            Write-Host "No Recall data found for user: $username" -ForegroundColor Green
+            $results_basefolder += 0
+            continue
+        }
+
+        $guidFolders = Get-ChildItem -Path $basePath -Directory
+        foreach ($guidFolder in $guidFolders) {
+            $guidFolderPath = $guidFolder.FullName
+            $dbPath = Join-Path -Path $guidFolderPath -ChildPath "ukg.db"
+            $imageStorePath = Join-Path -Path $guidFolderPath -ChildPath "ImageStore"
+
+            if (Test-Path -Path $dbPath) {
+                Write-Host "Recall database file 'ukg.db' found at $dbPath for user: $username" -ForegroundColor Red
+                $results_database += 2
+            }
+
+            if (Test-Path -Path $imageStorePath) {
+                $imageStoreFiles = Get-ChildItem -Path $imageStorePath
+                if ($imageStoreFiles) {
+                    Write-Host "Recall folder 'ImageStore' with data found at $imageStorePath for user: $username" -ForegroundColor red
+                    $results_imagefolder += 2
+                }
+            }
+        }
+    }
+
+    # Evaluate the results
+    $recall_basefolder = if ($results_basefolder -contains 2) { 2 } elseif ($results_basefolder -contains 1) { 1 } else { 0 }
+    $recall_database = if ($results_database -contains 2) { 2 } elseif ($results_database -contains 1) { 1 } else { 0 }
+    $recall_imagefolder = if ($results_imagefolder -contains 2) { 2 } elseif ($results_imagefolder -contains 1) { 1 } else { 0 }
+
+    # Check the registry settings for current user
+    $currentSID = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $userRegKeyPath = "Registry::HKEY_USERS\$currentSID\Software\Policies\Microsoft\Windows\WindowsAI"
+    $userRegValue = "DisableAIDataAnalysis"
+    $userRegValueData = Get-ItemPropertyValue -Path $userRegKeyPath -Name $userRegValue -ErrorAction SilentlyContinue
+    if ($userRegValueData -eq 1) {
+        Write-Host "Registry key 'DisableAIDataAnalysis' is set for current user" -ForegroundColor Green
+        $recall_regkey_user = 0
+    }
+    else {
+        Write-Host "The registry key to disable Recall for the current user is NOT set!!!" -ForegroundColor Red
+        $recall_regkey_user = 2
+    }
+
+    # Check registry key for local machine. Currently NOT supported by Microsoft!!!! Only treated as maybe finding
+    $machineRegKeyPath = "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI"
+    $machineRegValue = "DisableAIDataAnalysis"
+    $machineRegKey = Get-ItemProperty -Path $machineRegKeyPath -ErrorAction SilentlyContinue
+
+    if ($machineRegKey -and ($machineRegKey.$machineRegValue -eq 1)) {
+        Write-Host "Registry key 'DisableAIDataAnalysis' is set for the machine" -ForegroundColor Green
+        $recall_regkey_machine = 0
+    }
+    else {
+        Write-Host "The registry key to disable Recall system wide is NOT set!!!" -ForegroundColor Magenta
+        $recall_regkey_machine = 1
+    }
 
     # Summary
     Write-host ""
@@ -1640,6 +1721,41 @@ function Client-Checker{
     switch ($printnightmare_npa_upd){
         0 {Add-Result "PrintNightmare" "Non Package Aware Update" "OK"}
         2 {Add-Result "PrintNightmare" "Non Package Aware Update" "BAD"}
+    }
+
+    switch ($recall_basefolder){
+        0 {Add-Result "Recall" "Data" "OK"}
+        1 {Add-Result "Recall" "Data" "MAYBE"}
+        2 {Add-Result "Recall" "Data" "BAD"}
+        3 {Add-Result "Recall" "Data" "Error"}
+    }
+
+    switch ($recall_database){
+        0 {Add-Result "Recall" "Database" "OK"}
+        1 {Add-Result "Recall" "Database" "MAYBE"}
+        2 {Add-Result "Recall" "Database" "BAD"}
+        3 {Add-Result "Recall" "Database" "Error"}
+    }
+
+    switch ($recall_imagefolder){
+        0 {Add-Result "Recall" "Images" "OK"}
+        1 {Add-Result "Recall" "Images" "MAYBE"}
+        2 {Add-Result "Recall" "Images" "BAD"}
+        3 {Add-Result "Recall" "Images" "Error"}
+    }
+
+    switch ($recall_regkey_user){
+        0 {Add-Result "Recall" "Registry_User" "OK"}
+        1 {Add-Result "Recall" "Registry_User" "MAYBE"}
+        2 {Add-Result "Recall" "Registry_User" "BAD"}
+        3 {Add-Result "Recall" "Registry_User" "Error"}
+    }
+
+    switch ($recall_regkey_machine){
+        0 {Add-Result "Recall" "Registry_Machine" "OK"}
+        1 {Add-Result "Recall" "Registry_Machine" "MAYBE"}
+        2 {Add-Result "Recall" "Registry_Machine" "BAD"}
+        3 {Add-Result "Recall" "Registry_Machine" "Error"}
     }
 
     $results | Format-Table -AutoSize
