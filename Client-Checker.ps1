@@ -456,6 +456,7 @@ function Client-Checker{
     Write-host "#######################################"
     Write-host "# Now checking Credential Guard stuff #"
     Write-host "#######################################"
+    Write-host "References: https://itm4n.github.io/credential-guard-bypass/" -ForegroundColor DarkGray
     Write-host "References: https://learn.microsoft.com/en-us/windows/security/identity-protection/credential-guard/credential-guard-manage" -ForegroundColor DarkGray
     Write-host ""
     $credentialGuardEnabled = (Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard).SecurityServicesRunning
