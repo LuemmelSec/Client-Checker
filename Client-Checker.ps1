@@ -840,11 +840,11 @@ function Client-Checker{
         }
     }
 
-    # NetBIOS Name Resolution and LLMNR checks
+    # NetBIOS Name Resolution,LLMNR and mDNS checks
     Write-host ""
-    Write-host "#########################################"
-    Write-host "# Now checking NetBIOS / LLMNR settings #"
-    Write-host "#########################################"
+    Write-host "################################################"
+    Write-host "# Now checking NetBIOS / LLMNR / mDNS settings #"
+    Write-host "################################################"
     Write-host "References: https://luemmelsec.github.io/Relaying-101/" -ForegroundColor DarkGray
     Write-host ""
 
@@ -865,6 +865,23 @@ function Client-Checker{
         $llmnr = 2
     }
 
+    # Check if mDNS is enabled or disabled
+    $mDNSParametersKey = "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters"
+    try {
+        $mdnsValue = (Get-ItemProperty -Path $mDNSParametersKey -Name "EnableMDNS" -ErrorAction Stop).EnableMDNS
+
+        if ($mdnsValue -eq 0) {
+            Write-Host "mDNS status: disabled" -ForegroundColor Green
+            $mdns= 0
+        } elseif ($mdnsValue -eq 1) {
+            Write-Host "mDNS status: enabled" -ForegroundColor Red
+            $mdns = 2
+        }
+    } catch {
+        Write-Host "mDNS status: reg key not found - hence enabled" -ForegroundColor Red
+        $mdns = 2
+    }
+    
     # Check if NetBIOS is enabled for each network adapter
     $netbtInterfacePath = "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces"
     $adapterKeys = Get-ChildItem -Path $netbtInterfacePath -ErrorAction SilentlyContinue
@@ -1643,6 +1660,12 @@ function Client-Checker{
         0 {Add-Result "LLMNR" "-" "OK"}
         2 {Add-Result "LLMNR" "-" "BAD"}
     }
+
+    switch ($mdns){
+        0 {Add-Result "mDNS" "-" "OK"}
+        2 {Add-Result "mDNS" "-" "BAD"}
+    }
+    
     switch ($netbios){
         0 {Add-Result "NetBIOS" "-" "OK"}
         2 {Add-Result "NetBIOS" "-" "BAD"}
