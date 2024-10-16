@@ -45,7 +45,7 @@ It is used to check a client for common misconfigurations. The list currently in
   - WSUS Settings
   - PowerShell Settings
   - IPv6 Settings
-  - NetBIOS / LLMNR Settings
+  - NetBIOS / LLMNR Settings / mDNS
   - SMB Server Settings
   - Firewall Settings
   - AV Settings
