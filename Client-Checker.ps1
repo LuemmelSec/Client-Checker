@@ -1469,6 +1469,72 @@ function Client-Checker{
         Write-Host "The registry key to disable Recall system wide is NOT set!!!" -ForegroundColor Magenta
         $recall_regkey_machine = 1
     }
+    
+    # Autologon Checks
+    Write-host ""
+    Write-host "###############################"
+    Write-host "# Now checking Autologn stuff #"
+    Write-host "###############################"
+    Write-host "References: https://learn.microsoft.com/en-us/troubleshoot/windows-server/user-profiles-and-logon/turn-on-automatic-logon" -ForegroundColor DarkGray
+    Write-host ""
+
+    # Check registry entry for status
+    try {
+        $value = Get-ItemPropertyvalue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name "AutoAdminLogon" -ErrorAction Stop
+
+        if ($value -eq 0) {
+            Write-Host "Auto logon is disabled. You should still check for DefaultUserName and DefaultPassword" -ForegroundColor Magenta
+            $autologon = 1
+        }
+        elseif ($value -eq 1) {
+            Write-Host "Autologon enabled. You should check DefaultUserName and DefaultPassword" -ForegroundColor Red
+            $autologon = 2
+        }
+        else {
+            Write-Host "Autologon: regkey doesn't exist - hence disabled" -ForegroundColor Green
+            $autologon = 0
+        }
+    }
+    catch {
+        Write-Host "Autologon: regkey doesn't exist - hence disabled" -ForegroundColor Green
+        $autologon = 0
+    }
+
+    # Check registry entry for username
+    try {
+        $value = Get-ItemPropertyvalue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name "DefaultUserName" -ErrorAction Stop
+
+        if ([string]::IsNullOrEmpty($value)) {
+            Write-Host "Autologon Username not present." -ForegroundColor Green
+            $autologonuser = 0
+        }
+        else {
+            Write-Host "Autologon Username: "$value -ForegroundColor Red
+            $autologonuser = 2
+        }
+    }
+    catch {
+        Write-Host "Autologon username: regkey doesn't exist" -ForegroundColor Green
+        $autologonuser = 0
+    }
+
+    # Check registry entry for password
+    try {
+        $value = Get-ItemPropertyvalue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name "DefaultPassword" -ErrorAction Stop
+
+        if ([string]::IsNullOrEmpty($value)) {
+            Write-Host "Autologon Password not present." -ForegroundColor Green
+            $autologonpassword = 0
+        }
+        else {
+            Write-Host "Autologon Password: "$value -ForegroundColor Red
+            $autologonpassword = 2
+        }
+    }
+    catch {
+        Write-Host "Autologon Password: regkey doesn't exist" -ForegroundColor Green
+        $autologonpassword = 0
+    }
 
     # Summary
     Write-host ""
@@ -1780,6 +1846,27 @@ function Client-Checker{
         1 {Add-Result "Recall" "Registry_Machine" "MAYBE"}
         2 {Add-Result "Recall" "Registry_Machine" "BAD"}
         3 {Add-Result "Recall" "Registry_Machine" "Error"}
+    }
+
+    switch ($autologon){
+        0 {Add-Result "Autologon" "-" "OK"}
+        1 {Add-Result "Autologon" "-" "MAYBE"}
+        2 {Add-Result "Autologon" "-" "BAD"}
+        3 {Add-Result "Autologon" "-" "Error"}
+    }
+
+    switch ($autologonuser){
+        0 {Add-Result "Autologon" "User" "OK"}
+        1 {Add-Result "Autologon" "User" "MAYBE"}
+        2 {Add-Result "Autologon" "User" "BAD"}
+        3 {Add-Result "Autologon" "User" "Error"}
+    }
+
+    switch ($autologon){
+        0 {Add-Result "Autologon" "Password" "OK"}
+        1 {Add-Result "Autologon" "Password" "MAYBE"}
+        2 {Add-Result "Autologon" "Password" "BAD"}
+        3 {Add-Result "Autologon" "Password" "Error"}
     }
 
     $results | Format-Table -AutoSize
