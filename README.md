@@ -56,6 +56,7 @@ It is used to check a client for common misconfigurations. The list currently in
   - WinRM Settings
   - PrintNightmare checks
   - Recall checks
+  - Autologon checks
   
 # The looks
 You will have a detailed section which gets generated on the fly with a category, what the script found as well as links to resources for more detail, abuse paths and remmediations.  
