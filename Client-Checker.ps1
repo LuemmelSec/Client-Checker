@@ -1536,6 +1536,27 @@ function Client-Checker{
         $autologonpassword = 0
     }
 
+    # MDT Checks
+    Write-host ""
+    Write-host "##########################"
+    Write-host "# Now checking MDT stuff #"
+    Write-host "##########################"
+    Write-host "References: https://trustedsec.com/blog/red-team-gold-extracting-credentials-from-mdt-shares" -ForegroundColor DarkGray
+    Write-host ""
+
+    # Check registry entry for MDT presence
+    $mdtRegKey1 = "HKLM:\Software\Microsoft\Deployment 4"
+    $mdtRegKey2 = "HKLM:\Software\Microsoft\BDD 2007"
+
+
+    if ((Test-Path $mdtRegKey1) -or (Test-Path $mdtRegKey2)) {
+        Write-Host "MDT seems to be in use. Regkey found. You should search for the shares." -ForegroundColor Red
+        $mdt = 2
+    } else {
+        Write-Host "MDT does not seem to be in use. No regkey found" -ForegroundColor Green
+        $mdt = 0
+    }
+
     # Summary
     Write-host ""
     Write-host "###########" -ForegroundColor DarkCyan
@@ -1867,6 +1888,13 @@ function Client-Checker{
         1 {Add-Result "Autologon" "Password" "MAYBE"}
         2 {Add-Result "Autologon" "Password" "BAD"}
         3 {Add-Result "Autologon" "Password" "Error"}
+    }
+
+    switch ($mdt){
+        0 {Add-Result "MDT" "-" "OK"}
+        1 {Add-Result "MDT" "-" "MAYBE"}
+        2 {Add-Result "MDT" "-" "BAD"}
+        3 {Add-Result "MDT" "-" "Error"}
     }
 
     $results | Format-Table -AutoSize
